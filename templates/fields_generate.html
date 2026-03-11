@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_head %}
+<style>
+body { 
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    background-color: #ffffff;
+    color: #1e293b;
+    padding: 20px; 
+}
+.form-builder { 
+    max-width: 700px; 
+    margin: auto; 
+    background-color: #f8fafc;
+    padding: 30px; 
+    border-radius: 12px; 
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+h2 { text-align: center; margin-bottom: 25px; color: #1e3a8a; }
+
+.field { 
+    display: flex; 
+    align-items: center; 
+    margin-bottom: 15px; 
+    gap: 10px;
+    cursor: grab;
+}
+.field input[type="text"], .field select { 
+    flex: 1; 
+    padding: 8px 10px; 
+    border-radius: 6px; 
+    border: 1px solid #cbd5e1; 
+    background-color: #ffffff; 
+    color: #1e293b; 
+}
+.field input[type="text"]:disabled {
+    background-color: #e2e8f0;
+    color: #64748b;
+    font-style: italic;
+}
+
+button { padding: 8px 14px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s ease-in-out; }
+button:hover { opacity: 0.85; }
+.add-btn { background-color: #1e3a8a; color: #ffffff; }
+.remove-btn { background-color: #dc2626; color: #ffffff; }
+.save-btn { background-color: #1e3a8a; color: #ffffff; width: 100%; margin-top: 20px; font-size: 16px; }
+hr { margin: 25px 0; border-color: #cbd5e1; }
+
+@media (max-width: 600px) {
+    .field { flex-direction: column; align-items: stretch; }
+    .field input, .field select, .field button { width: 100%; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-builder">
+    <h2>Dynamic Form Builder</h2>
+
+    <!-- Add Field Section -->
+    <div class="field">
+        <input type="text" id="field-label" placeholder="Field Label">
+        <select id="field-type">
+            <option value="text">Text</option>
+            <option value="number">Number</option>
+            <option value="date">Date</option>
+            <option value="password">Password</option>
+        </select>
+        <button class="add-btn" onclick="addField()">Add Field</button>
+    </div>
+
+    <hr>
+
+    <!-- Form Preview Section -->
+    <div id="dynamic-form"></div>
+
+    <button class="save-btn" onclick="saveForm()">Save Form</button>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+let fields = [];
+
+// Load fields from context
+{% if dynamic_fields %}
+fields = [
+    {% for f in dynamic_fields %}
+    {label: "{{ f.label|escapejs }}", type: "{{ f.field_type }}"}{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+{% endif %}
+
+// Add new field
+function addField() {
+    const label = $('#field-label').val().trim();
+    const type = $('#field-type').val();
+    if(!label){
+        Swal.fire({ icon: 'warning', title: 'Oops!', text: 'Please enter a field label!', confirmButtonColor: '#1e3a8a' });
+        return;
+    }
+    fields.push({ label, type });
+    renderForm();
+    $('#field-label').val('');
+}
+
+// Render fields dynamically
+function renderForm() {
+    const form = $('#dynamic-form');
+    form.empty();
+
+    fields.forEach((field, index) => {
+        const div = $('<div class="field"></div>');
+
+        const inputLabel = $('<input type="text">').val(field.label).on('input', (e) => {
+            fields[index].label = e.target.value;
+        });
+
+        const selectType = $('<select></select>');
+        ['text','number','date','password'].forEach(opt => {
+            const option = $('<option></option>').val(opt).text(opt.charAt(0).toUpperCase() + opt.slice(1));
+            if(opt === field.type) option.prop('selected', true);
+            selectType.append(option);
+        });
+        selectType.on('change', (e) => fields[index].type = e.target.value);
+
+        const removeBtn = $('<button type="button" class="remove-btn">Remove</button>').on('click', () => {
+            fields.splice(index, 1);
+            renderForm();
+        });
+
+        const inputPreview = $('<input disabled>').attr('type', field.type).attr('placeholder', field.label);
+
+        div.append(inputLabel, selectType, removeBtn, inputPreview);
+        form.append(div);
+    });
+
+    // Enable drag-and-drop sorting within the form
+    form.sortable({
+        placeholder: "ui-state-highlight",
+        stop: function(event, ui){
+            const newFields = [];
+            form.children('.field').each(function(){
+                const idx = $(this).index();
+                newFields.push(fields[idx]);
+            });
+            fields = newFields;
+        }
+    });
+    form.disableSelection();
+}
+
+// Save form via AJAX
+function saveForm() {
+    if(fields.length === 0){
+        Swal.fire({ icon: 'warning', title: 'Oops!', text: 'Add at least one field before saving!', confirmButtonColor: '#1e3a8a' });
+        return;
+    }
+
+    $.ajax({
+        url: "{% url 'employee:employee_fields_generate' %}",
+        type: "POST",
+        data: JSON.stringify({fields: fields}),
+        contentType: "application/json",
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        success: function(data){
+            if(data.status){
+                Swal.fire({ icon: 'success', title: 'Saved!', text: 'Employee fields saved successfully.', confirmButtonColor: '#1e3a8a' });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error!', text: data.message || 'Something went wrong!', confirmButtonColor: '#1e3a8a' });
+            }
+        },
+        error: function(xhr){
+            console.error(xhr);
+            Swal.fire({ icon: 'error', title: 'Error!', text: 'Failed to save fields.', confirmButtonColor: '#1e3a8a' });
+        }
+    });
+}
+
+// Render initial fields on page load
+$(document).ready(function(){
+    renderForm();
+});
+</script>
+{% endblock %}

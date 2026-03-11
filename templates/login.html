@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Mazer Admin Dashboard</title>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Bootstrap & Icons -->
+    <link rel="stylesheet" href="{% static 'assets/css/bootstrap.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/vendors/bootstrap-icons/bootstrap-icons.css' %}">
+
+    <!-- App CSS -->
+    <link rel="stylesheet" href="{% static 'assets/css/app.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/css/pages/auth.css' %}">
+
+    
+    <!--begin::Vendor Stylesheets(used by this page)-->
+	<link href="{% static 'assets/plugins/custom/datatables/datatables.bundle.css' %}?time={% now 'h:i:s' %}"
+    rel="stylesheet" type="text/css" />
+	<link href="{% static 'assets/plugins/custom/vis-timeline/vis-timeline.bundle.css' %}?time={% now 'h:i:s' %}"
+    rel="stylesheet" type="text/css" />
+    <link href="{% static 'assets/plugins/global/plugins.bundle.css' %}?time={% now 'h:i:s' %}" rel="stylesheet"
+    type="text/css" />
+    <link href="{% static 'assets/css/style.bundle.css' %}?time={% now 'h:i:s' %}" rel="stylesheet" type="text/css" />
+    <!--end::Global Stylesheets Bundle-->
+    
+    <!-- Toastr CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+    
+</head>
+
+<body>
+    <div id="auth">
+        <div class="row h-100">
+            <div class="col-lg-5 col-12">
+                <div id="auth-left">
+                    <div class="auth-logo">
+                        <h1 class="auth-title">Employee Management</h1>
+                    </div>
+
+                    <form id="_sign_in_form" data-redirect-url="{% url 'users:home' %}" method="post">
+                        {% csrf_token %}
+                        <div class="form-group position-relative has-icon-left mb-4 fv-row">
+                            <input type="text" class="form-control form-control-xl" name="username" placeholder="Username" required>
+                            <div class="form-control-icon">
+                                <i class="bi bi-person"></i>
+                            </div>
+                        </div>
+
+                        <div class="form-group position-relative has-icon-left mb-4 fv-row">
+                            <input type="password" class="form-control form-control-xl" name="password" placeholder="Password" required>
+                            <div class="form-control-icon">
+                                <i class="bi bi-shield-lock"></i>
+                            </div>
+                        </div>
+
+
+                        <button type="button" class="btn btn-primary btn-block btn-lg shadow-lg mt-3" id="_sign_in_submit">Log in</button>
+                    </form>
+
+                    <div class="text-center mt-5 text-lg fs-4">
+                        <p class="text-gray-600">Don't have an account? <a href="{% url 'users:register' %}" class="font-bold">Sign up</a>.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7 d-none d-lg-block">
+                <div id="auth-right"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Variables JS -->
+    <script>var hostUrl = "{% static 'assets/' %}";</script>
+	<script src="{% static 'assets/plugins/global/plugins.bundle.js' %}?time={% now 'h:i:s' %}"></script>
+	<script src="{% static 'assets/js/scripts.bundle.js' %}?time={% now 'h:i:s' %}"></script>
+	<script src="{% static 'assets/plugins/custom/formrepeater/formrepeater.bundle.js' %}?time={% now 'h:i:s' %}"></script>
+	<script src="{% static 'assets/plugins/custom/datatables/datatables.bundle.js' %}?time={% now 'h:i:s' %}"></script>
+	<script src="{% static 'assets/plugins/custom/vis-timeline/vis-timeline.bundle.js' %}?time={% now 'h:i:s' %}"></script>
+	<!--end::Javascript-->
+
+    <!-- JS Toastr -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script>
+        toastr.options = {
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "timeOut": "4000",
+            "extendedTimeOut": "1000"
+        };
+
+        // Show Django messages automatically
+        {% if messages %}
+            {% for message in messages %}
+                {% if message.tags == "success" %}
+                    toastr.success("{{ message }}");
+                {% elif message.tags == "error" %}
+                    toastr.error("{{ message }}");
+                {% elif message.tags == "warning" %}
+                    toastr.warning("{{ message }}");
+                {% else %}
+                    toastr.info("{{ message }}");
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </script>
+    <!-- Toastr END -->
+
+
+
+
+
+
+    <script>
+        "use strict";
+        var SigninGeneral = function () { // Elements
+            var form;
+            var submitButton;
+            var validator;
+            var handleForm = function (e) {
+                validator = FormValidation.formValidation(form, {
+                    fields: {
+                        'username': {
+                            validators: {
+                                notEmpty: {
+                                    message: 'Username is required'
+                                },
+                                regexp: {
+                                    regexp: /^[^\s]+$/,
+                                    message: 'Username cannot contain spaces'
+                                }
+                            }
+                        },
+                        'password': {
+                            validators: {
+                                notEmpty: {
+                                    message: 'The password is required'
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        trigger: new FormValidation.plugins.Trigger(),
+                        bootstrap: new FormValidation.plugins.Bootstrap5(
+                            { rowSelector: '.fv-row' }
+                        )
+                    }
+                });
+
+                // Handle form submit
+                submitButton.addEventListener('click', function (e) { 
+                    e.preventDefault();
+
+                    // Validate form
+                    validator.validate().then(function(status) {
+                    if (status === 'Valid') {
+                        // Form is valid, proceed with AJAX
+                        let username = form.querySelector('[name="username"]').value.trim();
+                        let password = form.querySelector('[name="password"]').value.trim();
+                        let csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]').value;
+
+                        submitButton.setAttribute('data-kt-indicator', 'on');
+                        submitButton.disabled = true;
+
+                        $.ajax({
+                            url: "{% url 'users:auth_login' %}",
+                            type: "POST",
+                            data: {
+                                username: username,
+                                password: password,
+                                csrfmiddlewaretoken: csrfToken
+                            },
+                            success: function(data) {
+                                if (data.status === true) {
+                                    form.reset();
+
+                                    // Redirect after 1 second
+                                    const redirectUrl = form.getAttribute('data-redirect-url');
+                                    if (redirectUrl) {
+                                        setTimeout(function() {
+                                            window.location.href = redirectUrl;
+                                        }, 1000);
+                                    }
+                                } else {
+                                    toastr.error(data.message || "Incorrect username or password.");
+                                }
+                            },
+                            error: function(xhr, status, error) {
+                                toastr.error("An unexpected error occurred. Please try again.");
+                            },
+                            complete: function() {
+                                submitButton.removeAttribute('data-kt-indicator');
+                                submitButton.disabled = false;
+                            }
+                        });
+                    } else {
+                        // Form has validation errors
+                        toastr.error("Please fix the errors in the form before submitting.");
+                    }
+                });
+            });
+            }
+
+            // Public functions
+            return { // Initialization
+                init: function () {
+                    form = document.querySelector('#_sign_in_form');
+                    submitButton = document.querySelector('#_sign_in_submit');
+
+                    handleForm();
+                }
+            };
+        }();
+
+        KTUtil.onDOMContentLoaded(function () {
+            SigninGeneral.init();
+        });
+    </script>
+
+</body>
+</html>

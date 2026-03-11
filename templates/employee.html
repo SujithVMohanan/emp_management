@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load json_extras %}
+{% block extra_head %}
+<style>
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #fff; color: #1e293b; padding: 20px;}
+.container { max-width: 900px; margin: auto; }
+h2 { color: #1e3a8a; margin-bottom: 20px; }
+table { width: 100%; border-collapse: collapse; margin-top: 15px;}
+table th, table td { border: 1px solid #cbd5e1; padding: 8px; text-align: left;}
+table th { background-color: #f1f5f9; }
+button { padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; margin: 2px;}
+.create-btn { background: #1e3a8a; color: #fff; }
+.edit-btn { background: #2563eb; color: #fff; }
+.delete-btn { background: #dc2626; color: #fff; }
+.pagination { margin-top: 15px; display: flex; gap: 5px;}
+.pagination button { background: #f1f5f9; color: #1e293b; }
+.modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+.modal-content { background: #fff; padding: 20px; border-radius: 10px; width: 500px; max-width: 90%; }
+.field { display: flex; gap: 10px; margin-bottom: 10px; }
+.field input, .field select { flex: 1; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Employees</h2>
+    <button class="create-btn" onclick="openModal()">Create Employee</button>
+
+    <!-- Employee Table -->
+    <table>
+        <thead>
+            <tr>
+                {% for f in dynamic_fields %}
+                    <th>{{ f.label }}</th>
+                {% endfor %}
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="employee-list">
+           {% for emp in employees %}
+            <tr data-id="{{ emp.id }}">
+                
+                {% for f in dynamic_fields %}
+                    <td>{{ emp.dynamic_data|get_item:f.label }}</td>
+                {% endfor %}
+
+                <td>
+                    <button class="edit-btn" onclick="editEmployee('{{ emp.id }}')">Edit</button>
+                    <button class="delete-btn" onclick="deleteEmployee('{{ emp.id }}')">Delete</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    <div class="pagination">
+        {% if employees.has_previous %}
+            <button onclick="window.location='?page={{ employees.previous_page_number }}'">Previous</button>
+        {% endif %}
+        <span>Page {{ employees.number }} of {{ employees.paginator.num_pages }}</span>
+        {% if employees.has_next %}
+            <button onclick="window.location='?page={{ employees.next_page_number }}'">Next</button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal for Create/Edit -->
+<div class="modal" id="employee-modal">
+    <div class="modal-content">
+        <h3 id="modal-title">Create Employee</h3>
+        <form id="employee-form">
+            {% for f in dynamic_fields %}
+            <div class="field">
+                <label>{{ f.label }}:</label>
+                <input type="{{ f.field_type }}" name="field_{{ f.id }}" id="field_{{ f.id }}">
+            </div>
+            {% endfor %}
+            <button type="submit" class="create-btn">Save</button>
+            <button type="button" onclick="closeModal()">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+let currentEditId = null;
+
+function openModal(editId=null){
+    currentEditId = editId;
+    $('#employee-form')[0].reset();
+    $('#modal-title').text(editId ? 'Edit Employee' : 'Create Employee');
+
+    if(editId){
+            $.get(`/employee/${editId}/edit/`, function(response){
+
+                const dynamicData = response.data || {};
+
+                console.log("Employee data:", dynamicData);
+
+                // fill inputs dynamically
+                $('#employee-form .field').each(function(){
+
+                    const label = $(this)
+                        .find('label')
+                        .text()
+                        .replace(':','')
+                        .trim();
+
+                    if(dynamicData[label] !== undefined){
+                        $(this).find('input,select')
+                            .val(dynamicData[label]);
+                    }
+                });
+
+            });
+        }
+
+    $('#employee-modal').css('display','flex');
+}
+
+function closeModal(){
+    $('#employee-modal').hide();
+}
+
+$('#employee-form').on('submit', function(e){
+    e.preventDefault();
+    const payload = { fields: {} };
+    {% for f in dynamic_fields %}
+    payload.fields['{{ f.label }}'] = $('#field_{{ f.id }}').val();
+    {% endfor %}
+
+    const url = currentEditId ? `/employee/${currentEditId}/edit/` : `{% url 'employee:create_employee' %}`;
+    $.ajax({
+        url: url,
+        type: 'POST',
+        data: JSON.stringify(payload),
+        contentType: 'application/json',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+        success: function(data){
+            if(data.status === 'success'){
+                Swal.fire('Success', 'Employee saved successfully','success').then(()=> location.reload());
+            } else Swal.fire('Error', data.message || 'Failed to save','error');
+        },
+        error: function(err){ Swal.fire('Error','Something went wrong','error'); }
+    });
+});
+
+function editEmployee(empId){
+    openModal(empId);
+}
+
+function deleteEmployee(empId){
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "This will delete employee!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Yes, delete it!'
+    }).then((result) => {
+        if(result.isConfirmed){
+            $.ajax({
+                url: `/employee/${empId}/delete/`,
+                type: 'POST',
+                headers: {'X-CSRFToken': '{{ csrf_token }}'},
+                success: function(data){
+                    if(data.status==='success') Swal.fire('Deleted!','Employee deleted','success').then(()=> location.reload());
+                    else Swal.fire('Error',data.message || 'Failed to delete','error');
+                }
+            });
+        }
+    });
+}
+</script>
+
+
+
+
+{% endblock %}

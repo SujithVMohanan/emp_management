@@ -1,0 +1,135 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard - Mazer Admin Dashboard{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'assets/css/bootstrap.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/vendors/perfect-scrollbar/perfect-scrollbar.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/vendors/bootstrap-icons/bootstrap-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/css/app.css' %}">
+    <link rel="shortcut icon" href="{% static 'assets/images/favicon.svg' %}" type="image/x-icon">
+
+    <!-- Toastr CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+    <div id="app">
+        <!-- Sidebar -->
+        <div id="sidebar" class="active">
+            <div class="sidebar-wrapper active">
+                <!-- Profile Section -->
+                <div class="sidebar-profile p-3 d-flex align-items-center border-bottom">
+                    <!-- Avatar with status -->
+                    <div class="avatar position-relative me-3">
+                        <img 
+                            src="{% if request.user.image %}{{ request.user.image.url }}{% else %}{% static 'assets/images/faces/1.jpg' %}{% endif %}" 
+                            alt="Profile Picture" 
+                            class="rounded-circle" 
+                            width="50" 
+                            height="50">
+                        <!-- Online status indicator -->
+                        <span class="position-absolute bottom-0 end-0 p-1 bg-success rounded-circle border border-white" title="Online"></span>
+                    </div>
+
+                    <!-- User Info and Dropdown -->
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0 fw-bold">{{ request.user.get_full_name|default:request.user.username }}</h6>
+                                <small class="text-muted d-block">{{ request.user.email }}</small>
+                            </div>
+                            <div class="dropdown ms-2">
+                                <a href="#" class="text-decoration-none" data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </a>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                    <li><a class="dropdown-item" href="{% url 'users:profile' %}"><i class="bi bi-person-circle me-2"></i>Profile</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'users:change_password' %}"><i class="bi bi-gear me-2"></i>Change Password</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="{% url 'users:logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar Menu -->
+                <div class="sidebar-menu">
+                    <ul class="menu">
+                        <li class="sidebar-title">Menu</li>
+                        <li class="sidebar-item active">
+                            <a href="{% url 'users:home' %}" class='sidebar-link'>
+                                <i class="bi bi-grid-fill"></i>
+                                <span>Dashboard</span>
+                            </a>
+                        </li>
+                        <li class="sidebar-item active">
+                            <a href="{% url 'employee:employee_fields_generate' %}" class='sidebar-link'>
+                                <i class="bi bi-grid-fill"></i>
+                                <span>Fields Generate</span>
+                            </a>
+                        </li>
+                        <li class="sidebar-item active">
+                            <a href="{% url 'employee:employees' %}" class='sidebar-link'>
+                                <i class="bi bi-grid-fill"></i>
+                                <span>Employees</span>
+                            </a>
+                        </li>
+
+                    </ul>
+                </div>
+                <button class="sidebar-toggler btn x"><i data-feather="x"></i></button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main">
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+
+    <!-- JS Libraries -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="{% static 'assets/js/bootstrap.bundle.min.js' %}"></script>
+
+    <!-- Toastr JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+    <!-- Global Toastr Config -->
+    <script>
+        toastr.options = {
+            "closeButton": true,
+            "progressBar": true,
+            "positionClass": "toast-top-right",
+            "timeOut": "4000",
+            "extendedTimeOut": "1000"
+        };
+
+        // Show Django messages automatically
+        {% if messages %}
+            {% for message in messages %}
+                {% if message.tags == "success" %}
+                    toastr.success("{{ message }}");
+                {% elif message.tags == "error" %}
+                    toastr.error("{{ message }}");
+                {% elif message.tags == "warning" %}
+                    toastr.warning("{{ message }}");
+                {% else %}
+                    toastr.info("{{ message }}");
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
