@@ -1,6 +1,21 @@
+# Django framework
 Django==6.0.3
+
+# REST framework
 djangorestframework==3.16.1
-drf-yasg==1.21.5
+
+# Swagger / API docs (drf-yasg)
+drf-yasg>=1.21.5
+
+# JWT authentication
 djangorestframework_simplejwt==5.5.1
+
+# Filtering for DRF
 django-filter==25.2
+
+# Environment variables
 python-dotenv==1.2.2
+
+# Ensure compatible dependencies
+setuptools>=68.0.0
+wheel>=0.41.0
